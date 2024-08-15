@@ -1,7 +1,7 @@
 //const endpoint = url
 //const apiCall =  await fetch(endpoint)
 //const response = await apiCall.json()
-const token = "7450619219:AAGHQNH7S1V4HVLu0x3ppeJTv-6yRDKsaZQ";
+const token = "7450619219:AAGHQNH7S1V4HVLu0x3ppeJTv-6yRDKsa";
 const TelegramBot = require("node-telegram-bot-api");
 const path = require('path');
 const fs = require('fs');
