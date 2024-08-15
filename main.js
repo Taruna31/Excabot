@@ -22,7 +22,8 @@ const menu = {
         inline_keyboard: [
             [
                 { text: 'Kirim Excel', callback_data: 'excel' },
-                { text: 'Kirim Pesan', callback_data: 'message' }
+                { text: 'Kirim Pesan', callback_data: 'message' },
+                { text: 'Kirim Raw Excel', callback_data: 'rawExcel'}
             ]
         ]
     }
@@ -34,45 +35,55 @@ excaBot.onText(/\/start/, (msg) => {
     excaBot.sendMessage(chatId, 'Silakan pilih opsi untuk format laporan:', menu);
 });
 
+// Fungsi untuk mengonversi tanggal Excel ke format 0X/0X/20XX
+function convertExcelDateToPlaceholder(serial) {
+    // Konversi serial number ke tanggal JavaScript
+    const date = new Date((serial - 25569) * 86400 * 1000);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+
+    // Mengubah format menjadi 0X/0X/20XX
+    return `0${day[1]}/0${month[1]}/20XX`;
+}
+
 // Menangani tombol inline
 excaBot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const action = callbackQuery.data;
-    //console.log(callbackQuery)
     
     if (action === 'excel') {
-        excaBot.sendDocument(chatId, 'result.xlsx');
+        excaBot.sendDocument(chatId, 'EX3011.xlsx');
     } else if (action === 'message') {
         const jsonFilePath = path.join(__dirname, 'output.json');
 
         // Baca file JSON dan kirimkan kontennya sebagai pesan teks
-        const sendInChunks = (chatId, text, chunkSize = 4000) => {
-            for (let i = 0; i < text.length; i += chunkSize) {
-                excaBot.sendMessage(chatId, text.substring(i, i + chunkSize))
-                    .catch((error) => {
-                        console.error('Error sending message chunk:', error);
-                    });
-            }
-        };
-        
         fs.readFile(jsonFilePath, 'utf8', (err, data) => {
             if (err) {
                 console.error('Error reading JSON file:', err);
                 excaBot.sendMessage(chatId, 'Terjadi kesalahan saat membaca file JSON.');
                 return;
             }
-             // Parsing JSON dan memformat pesan
-             let jsonData = JSON.parse(data);
-             let formattedMessage = jsonData.map(item => {
-                 return `[
-                    date: ${item[0]}
-                    Avg.Relief: ${item[1]}
-                    Arm in or bucket curl: ${item[2]}
-                    Karakteristik Material: ${item[3]}
-                    ]`;
-             }).join('\n');
-            sendInChunks(chatId, formattedMessage);
+
+            // Parsing JSON dan memformat pesan
+            const jsonData = JSON.parse(data);
+            const excelDate = jsonData[0]["__EMPTY"];
+            const formattedDate = convertExcelDateToPlaceholder(excelDate);
+
+            const formattedMessage = `
+Nama unit: EX3011
+Tanggal: ${formattedDate}
+Jumlah Material Normal: ${jsonData[2]["__EMPTY"]}
+Jumlah Material Keras: ${jsonData[3]["__EMPTY"]}
+            `;
+
+            excaBot.sendMessage(chatId, formattedMessage)
+                .catch((error) => {
+                    console.error('Error sending message:', error);
+                });
         });
+    } else if (action === 'rawExcel') {
+        excaBot.sendDocument(chatId, 'RAW_EX3011.xlsx');
     }
 
     // Mengirimkan feedback ke pengguna bahwa perintah telah diproses
@@ -80,3 +91,4 @@ excaBot.on('callback_query', async (callbackQuery) => {
 });
 
 console.log('Bot running');
+
